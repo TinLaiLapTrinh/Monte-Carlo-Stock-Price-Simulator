@@ -1,0 +1,20 @@
+[package]
+name = "app_gui"
+version = "0.1.0"
+edition = "2024"
+build = "build.rs"
+
+[env]
+SLINT_INCLUDE_GENERATED = { value = "1" }
+
+[build-dependencies]
+slint-build = "1.14.1"
+
+[dependencies]
+slint = { version = "1.14.1", features = ["backend-winit", "renderer-femtovg"] }
+core_sim = { path = "../core_sim" }
+data_io = { path = "../data_io" }
+stats = { path = "../stats" }
+plotters = "0.3"
+anyhow = "1.0"
+image = "0.25"

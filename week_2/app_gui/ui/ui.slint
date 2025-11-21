@@ -1,0 +1,255 @@
+import { Button, VerticalBox, ScrollView, HorizontalBox } from "std-widgets.slint";
+
+export component MainWindow inherits Window {
+    // Properties
+    in-out property <[string]> tickers;
+    in-out property <image> paths_image;
+    in-out property <image> histogram_image;
+    in-out property <string> selected_ticker: "";
+    in-out property <float> mean_price: 0.0;
+    in-out property <bool> charts_visible: false;
+    
+    // Additional statistics
+    in-out property <float> mu: 0.0;
+    in-out property <float> sigma: 0.0;
+    in-out property <float> initial_price: 0.0;
+    in-out property <int> num_simulations: 0;
+    in-out property <int> num_steps: 0;
+
+    // Callbacks
+    callback ticker_selected(string);
+    callback request_load_csv();
+
+    // Window settings
+    width: 1400px;
+    height: 900px;
+    title: "Stock Fetcher - Monte Carlo Simulation";
+
+    HorizontalBox {
+        padding: 20px;
+        spacing: 20px;
+
+        // ==================== LEFT PANEL ====================
+        VerticalBox {
+            width: 260px;
+            spacing: 12px;
+
+            Text {
+                text: "📁 Stock Ticker Selection";
+                font-size: 20px;
+                font-weight: 700;
+            }
+
+            Button {
+                text: "Load CSV";
+                clicked => root.request_load_csv();
+            }
+
+            ScrollView {
+                height: parent.height - 100px;
+
+                VerticalBox {
+                    spacing: 8px;
+
+                    for ticker in root.tickers: Button {
+                        text: ticker;
+                        primary: ticker == root.selected_ticker;
+                        clicked => root.ticker_selected(ticker);
+                    }
+                }
+            }
+        }
+
+        // ==================== RIGHT PANEL ====================
+        VerticalBox {
+            spacing: 16px;
+            padding: 4px;
+
+            // Charts visible
+            if root.charts_visible: VerticalBox {
+                spacing: 16px;
+
+                // Header
+                HorizontalBox {
+                    spacing: 12px;
+
+                    Text {
+                        text: "📊 " + root.selected_ticker;
+                        font-size: 22px;
+                        font-weight: 700;
+                    }
+
+                    Text {
+                        text: "(S₀: $" + round(root.initial_price * 100) / 100 + " → Mean: $" + round(root.mean_price * 100) / 100 + ")";
+                        font-size: 16px;
+                        color: #008800;
+                    }
+                }
+
+                // Statistics Panel
+                Rectangle {
+                    background: #f8f9fa;
+                    border-color: #dee2e6;
+                    border-width: 1px;
+                    border-radius: 8px;
+                    
+                    HorizontalBox {
+                        padding: 16px;
+                        spacing: 24px;
+                        
+                        VerticalBox {
+                            spacing: 4px;
+                            Text {
+                                text: "Drift (μ)";
+                                font-size: 12px;
+                                color: #6c757d;
+                                font-weight: 600;
+                            }
+                            Text {
+                                text: round(root.mu * 10000) / 10000;
+                                font-size: 16px;
+                                font-weight: 700;
+                                color: root.mu >= 0 ? #28a745 : #dc3545;
+                            }
+                        }
+                        
+                        VerticalBox {
+                            spacing: 4px;
+                            Text {
+                                text: "Volatility (σ)";
+                                font-size: 12px;
+                                color: #6c757d;
+                                font-weight: 600;
+                            }
+                            Text {
+                                text: round(root.sigma * 10000) / 10000;
+                                font-size: 16px;
+                                font-weight: 700;
+                                color: #007bff;
+                            }
+                        }
+                        
+                        VerticalBox {
+                            spacing: 4px;
+                            Text {
+                                text: "Time Horizon";
+                                font-size: 12px;
+                                color: #6c757d;
+                                font-weight: 600;
+                            }
+                            Text {
+                                text: "1 year (" + root.num_steps + " steps)";
+                                font-size: 16px;
+                                font-weight: 700;
+                                color: #495057;
+                            }
+                        }
+                        
+                        VerticalBox {
+                            spacing: 4px;
+                            Text {
+                                text: "Simulations";
+                                font-size: 12px;
+                                color: #6c757d;
+                                font-weight: 600;
+                            }
+                            Text {
+                                text: root.num_simulations;
+                                font-size: 16px;
+                                font-weight: 700;
+                                color: #495057;
+                            }
+                        }
+                        
+                        VerticalBox {
+                            spacing: 4px;
+                            Text {
+                                text: "Expected Return";
+                                font-size: 12px;
+                                color: #6c757d;
+                                font-weight: 600;
+                            }
+                            Text {
+                                text: round((root.mean_price / root.initial_price - 1) * 10000) / 100 + "%";
+                                font-size: 16px;
+                                font-weight: 700;
+                                color: root.mean_price >= root.initial_price ? #28a745 : #dc3545;
+                            }
+                        }
+                    }
+                }
+
+                ScrollView {
+                    VerticalBox {
+                        spacing: 40px;
+
+                        // ============ MONTE CARLO GBM PATHS (IMAGE) ============
+                        VerticalBox {
+                            spacing: 10px;
+
+                            Text {
+                                text: "Monte Carlo GBM Paths (sample of " + root.num_simulations + " simulations)";
+                                font-size: 18px;
+                                font-weight: 700;
+                            }
+
+                            Rectangle {
+                                width: 1000px;
+                                height: 500px;
+                                background: white;
+                                border-color: #cccccc;
+                                border-width: 2px;
+                                border-radius: 4px;
+
+                                Image {
+                                    source: root.paths_image;
+                                    width: parent.width;
+                                    height: parent.height;
+                                    image-fit: contain;
+                                }
+                            }
+                        }
+
+                        // ============ HISTOGRAM OF TERMINAL PRICES (IMAGE) ============
+                        VerticalBox {
+                            spacing: 10px;
+
+                            Text {
+                                text: "Histogram of Terminal Prices (" + root.num_simulations + " simulations)";
+                                font-size: 18px;
+                                font-weight: 700;
+                            }
+
+                            Rectangle {
+                                width: 1000px;
+                                height: 500px;
+                                background: white;
+                                border-width: 2px;
+                                border-color: #cccccc;
+                                border-radius: 4px;
+
+                                Image {
+                                    source: root.histogram_image;
+                                    width: parent.width;
+                                    height: parent.height;
+                                    image-fit: contain;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Empty state
+            if !root.charts_visible: VerticalBox {
+                alignment: center;
+
+                Text {
+                    text: "👈 Select a ticker to run Monte Carlo simulation";
+                    font-size: 16px;
+                    color: #888;
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "app_gui",
+    "core_sim",
+    "data_io",
+    "stats"
+]
